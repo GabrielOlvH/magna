@@ -25,12 +25,6 @@ dependencies {
     modCompile "net.fabricmc:fabric-loader:${project.loader_version}"
     modCompile "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // config
-    include("me.shedaniel.cloth:cloth-config:${project.cloth_config_version}:fabric")
-    modApi("me.shedaniel.cloth:cloth-config:${project.cloth_config_version}:fabric") {
-        exclude(group: "net.fabricmc.fabric-api")
-    }
-
     // dev modmenu
     modCompile "io.github.prospector:modmenu:${project.mod_menu_version}"
 

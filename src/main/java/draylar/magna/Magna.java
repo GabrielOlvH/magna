@@ -1,15 +1,23 @@
 package draylar.magna;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import draylar.magna.config.MagnaConfig;
-import me.shedaniel.autoconfig.AutoConfig;
-import me.shedaniel.autoconfig.serializer.GsonConfigSerializer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.Identifier;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.Collections;
 
 public class Magna implements ModInitializer {
 
-    public static MagnaConfig CONFIG = AutoConfig.register(MagnaConfig.class, GsonConfigSerializer::new).getConfig();
+    private static final Logger LOGGER = LogManager.getLogger("magna");
+
+    public static MagnaConfig CONFIG = readConfig();
 
     @Override
     public void onInitialize() {
@@ -19,6 +27,23 @@ public class Magna implements ModInitializer {
         if(FabricLoader.getInstance().isDevelopmentEnvironment() && FabricLoader.getInstance().isModLoaded("reach-entity-attributes")) {
             MagnaTest.initialize();
         }
+    }
+
+    private static MagnaConfig readConfig() {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        File configFile = new File(FabricLoader.getInstance().getConfigDir().toFile(), "magna.json");
+
+        try {
+            if (configFile.exists())
+                return gson.fromJson(String.join("", Files.readAllLines(configFile.toPath())), MagnaConfig.class);
+            else if (configFile.createNewFile())
+                Files.write(configFile.toPath(), Collections.singleton(gson.toJson(new MagnaConfig())));
+            else
+                LOGGER.error("Failed to read or create config file, using default values.");
+        } catch (Exception e) {
+            LOGGER.error("Failed to read or create config file, using default values.", e);
+        }
+        return new MagnaConfig();
     }
 
     /**
