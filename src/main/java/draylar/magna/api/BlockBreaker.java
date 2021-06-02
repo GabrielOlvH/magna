@@ -3,6 +3,7 @@ package draylar.magna.api;
 import draylar.magna.Magna;
 import draylar.magna.api.reach.ReachDistanceHelper;
 import draylar.magna.impl.MagnaPlayerInteractionManagerExtension;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -13,6 +14,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.network.ServerPlayerInteractionManager;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -20,6 +23,7 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
@@ -72,6 +76,12 @@ public class BlockBreaker {
                 if(breakValidator.canBreak(world, pos) && !state.isAir()) {
                     state.getBlock().onBreak(world, pos, state, player);
                     if (!interactionManager.tryBreakBlock(pos)) {
+                        continue;
+                    }
+
+                    // check FAPI break callback
+                    boolean result = PlayerBlockBreakEvents.BEFORE.invoker().beforeBlockBreak(world, player, pos, state, world.getBlockEntity(pos));
+                    if(!result) {
                         continue;
                     }
 
@@ -136,6 +146,10 @@ public class BlockBreaker {
                 ItemEntity itemEntity = new ItemEntity(world, pos.getX(), pos.getY(), pos.getZ(), stack);
                 world.spawnEntity(itemEntity);
             }
+        }
+
+        if(!stacks.isEmpty() && Magna.CONFIG.autoPickup) {
+            world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.BLOCKS, 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
         }
     }
 
@@ -218,7 +232,8 @@ public class BlockBreaker {
                 // Operate on depth by extending the current block away from the player.
                 if(valid) {
                     for (int i = 1; i <= depth; i++) {
-                        potentialBrokenBlocks.add(origin.add(pos).add(blockHitResult.getSide().getOpposite().getVector()));
+                        Vec3i vec = blockHitResult.getSide().getOpposite().getVector();
+                        potentialBrokenBlocks.add(origin.add(pos).add(vec.getX() * i, vec.getY() * i, vec.getZ() * i));
                     }
                 }
             }
